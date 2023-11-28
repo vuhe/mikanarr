@@ -1,4 +1,4 @@
-<h1 style="text-align:center">mikanarr</h1>
+<h1 align="center">mikanarr</h1>
 
 ## 项目说明
 
@@ -36,7 +36,7 @@
 
 本地运行所产生的数据默认存放于同目录下 `.data` 文件夹，可以通过 `MK_APP_DATA` 环境变量进行调整
 
-## 打包运行
+## 打包构建
 
 > 请确保本地运行环境中可以运行 docker 并已开启 Buildkit
 
