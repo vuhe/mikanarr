@@ -1,0 +1,13 @@
+[package]
+name = "tmdb"
+version = "0.1.0"
+edition = "2021"
+description = "tmdb client 包装"
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+reqwest = { version = "0.11", features = ["json"] }
+
+[dev-dependencies]
+tokio-test = "0.4"

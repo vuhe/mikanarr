@@ -1,0 +1,14 @@
+[package]
+name = "database"
+version = "0.1.0"
+edition = "2021"
+description = "sqlite 的 ORM 包装"
+
+[dependencies]
+anyhow = "1"
+chrono = "0.4"
+sha256 = "1"
+tracing = "0.1"
+serde = { version = "1", features = ["derive"] }
+sea-orm = { version = "0.12", features = ["sqlx-sqlite", "runtime-tokio-rustls"] }
+sea-orm-migration = { version = "0.12", default-features = false }

@@ -1,0 +1,19 @@
+[package]
+name = "mikanarr"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+database = { path = "../database" }
+searcher = { path = "../searcher" }
+anyhow = "1"
+cached = "0.46"
+once_cell = "1"
+sha256 = "1"
+uuid = { version = "1" , features = ["v4", "fast-rng"]}
+dotenvy = "0.15"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "chrono"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+poem = { version = "1", features = ["static-files"]}

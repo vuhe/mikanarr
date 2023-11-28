@@ -1,0 +1,36 @@
+# for rust
+debug/
+target/
+*.pdb
+**/*.rs.bk
+
+# for test
+.DS_Store
+resources/dist/
+.data/
+
+# for idea
+.idea/
+.run/
+
+# for webui
+webui/node_modules
+webui/es/
+webui/lib/
+webui/dist/
+webui/typings/
+webui/_site
+webui/package
+webui/tmp*
+webui/temp*
+webui/coverage
+webui/test-report.html
+webui/yarn-error.log
+webui/*.zip
+webui/.history
+webui/.stylelintcache
+webui/yarn.lock
+webui/package-lock.json
+webui.pnpm-lock.yaml
+webui/.env.local
+webui/.env.*.local

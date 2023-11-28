@@ -1,0 +1,9 @@
+[package]
+name = "anitors"
+version = "0.1.0"
+edition = "2021"
+description = "基于 Anitomy 的动漫文件名解析器"
+
+[dependencies]
+regex = "1"
+lazy-regex = "3"

@@ -1,0 +1,7 @@
+[package]
+name = "manager"
+version = "0.1.0"
+edition = "2021"
+description = "基于 tmdb 的订阅管理器"
+
+[dependencies]
