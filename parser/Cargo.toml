@@ -8,7 +8,6 @@ description = "解析并缓存 torrent 文件名及其相关信息"
 anitors = { path = "../anitors" }
 database = { path = "../database" }
 tmdb = { path = "../tmdb" }
-async-trait = "0.1"
 anyhow = "1"
 bt_bencode = "0.7"
 once_cell = "1"

@@ -1,5 +1,6 @@
+use std::future::Future;
+
 use anyhow::Result;
-use async_trait::async_trait;
 
 use database::entity::Torrent;
 
@@ -8,15 +9,13 @@ mod mikan;
 mod name_info;
 mod tmdb_ids;
 
-#[async_trait]
 pub trait ParseTorrent {
     /// 尝试解析 hash 值
-    async fn try_parse_hash(&mut self) -> Result<()>;
+    fn try_parse_hash(&mut self) -> impl Future<Output = Result<()>>;
     /// 尝试解析详细信息
-    async fn try_parse_detail(&mut self) -> Result<()>;
+    fn try_parse_detail(&mut self) -> impl Future<Output = Result<()>>;
 }
 
-#[async_trait]
 impl ParseTorrent for Torrent {
     async fn try_parse_hash(&mut self) -> Result<()> {
         self.id = info_hash::parse_url_hash(&self.download_url).await?;
