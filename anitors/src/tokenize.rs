@@ -22,17 +22,14 @@ pub(crate) fn tokenizer(tokens: &mut Tokens) {
 /// 按括号将 token 分割，并区分 token 是否在括号内
 fn split_brackets(tokens: &mut Tokens) {
     for token in tokens.unknown_tokens() {
-        let left_bracket = regex!(r"[(\[{「『【（《〈]");
-        let right_bracket = regex!(r"[)\]}」』】）》〉]");
         let mut result = Vec::new();
         let mut next = token.to_text();
         let mut enclosed = false;
 
         while next.is_not_empty() {
-            let bracket_regex = if enclosed {
-                right_bracket
-            } else {
-                left_bracket
+            let bracket_regex = match enclosed {
+                true => regex!(r"[)\]}」』】）》〉]"),
+                false => regex!(r"[(\[{「『【（《〈]"),
             };
             let (left, sp, right) = next
                 .split_once(bracket_regex)
@@ -41,11 +38,10 @@ fn split_brackets(tokens: &mut Tokens) {
                 result.push(Token::unknown(left, enclosed));
             }
             if sp.is_not_empty() {
-                if enclosed {
-                    result.push(Token::bracket_closed(sp.clone(), true));
-                } else {
-                    result.push(Token::bracket_open(sp.clone(), true));
-                }
+                result.push(match enclosed {
+                    true => Token::bracket_closed(sp.clone(), true),
+                    false => Token::bracket_open(sp.clone(), true),
+                });
                 enclosed = !enclosed;
             }
             next = right;
@@ -151,29 +147,25 @@ fn remove_by_pat(tokens: &mut Tokens, token: &Token, pat: &Regex) {
     }
 }
 
+type Node<'a> = (&'a mut Tokens, &'a mut Token);
+
 /// 修正过度切分的 token
 fn fix_split(tokens: &mut Tokens) {
-    let mut all_tokens = tokens.all_tokens();
-    for token in all_tokens.iter_mut() {
-        if fix_audio_language(tokens, token) {
-            continue;
-        }
-        if fix_point_num(tokens, token) {
-            continue;
-        }
-        if fix_episode(tokens, token) {
-            continue;
-        }
-        if fix_chinese_episode(tokens, token) {
-            continue;
-        }
+    for mut token in tokens.all_tokens() {
+        [(&mut *tokens, &mut token)]
+            .into_iter()
+            .filter_map(fix_audio_language)
+            .filter_map(fix_point_num)
+            .filter_map(fix_episode)
+            .filter_map(fix_chinese_episode)
+            .count();
     }
 }
 
 // ============================= 拆分修正 =============================
 
 /// e.g. DUAL AUDIO, MULTI AUDIO
-fn fix_audio_language(tokens: &mut Tokens, token: &mut Token) -> bool {
+fn fix_audio_language((tokens, token): Node) -> Option<Node> {
     if regex_is_match!("^(?i)AUDIO$", &token.to_text()) {
         let sp = tokens.find_prev_valid(token);
         let prev = tokens.find_prev_valid(&sp);
@@ -182,14 +174,14 @@ fn fix_audio_language(tokens: &mut Tokens, token: &mut Token) -> bool {
             let mut new_token = prev.clone() + sp + token;
             new_token.set_unknown();
             tokens.replace(&prev, [new_token]);
-            return true;
+            return None;
         }
     }
-    return false;
+    return Some((tokens, token));
 }
 
 /// e.g. 2.0CH, 5.1, 5.1CH, DTS5.1, TRUEHD5.1
-fn fix_point_num(tokens: &mut Tokens, token: &mut Token) -> bool {
+fn fix_point_num((tokens, token): Node) -> Option<Node> {
     if token.to_text() == "." {
         let prev = tokens.find_prev_valid(token);
         let next = tokens.find_next_valid(token);
@@ -201,14 +193,14 @@ fn fix_point_num(tokens: &mut Tokens, token: &mut Token) -> bool {
             let mut new_token = prev + token + next;
             new_token.set_unknown();
             tokens.replace(&replace_token, [new_token]);
-            return true;
+            return None;
         }
     }
-    return false;
+    return Some((tokens, token));
 }
 
 /// e.g. "8 & 10", "01 of 24", "EP 90"
-fn fix_episode(tokens: &mut Tokens, token: &mut Token) -> bool {
+fn fix_episode<'a>((tokens, token): Node) -> Option<Node> {
     let text = token.to_text();
     // e.g. "8 & 10", "01 of 24", "01 + 02"
     if regex_is_match!(r"^(&|of|\+)$", &text) {
@@ -218,7 +210,7 @@ fn fix_episode(tokens: &mut Tokens, token: &mut Token) -> bool {
             let mut new_token = prev.clone() + token + next;
             new_token.set_unknown();
             tokens.replace(&prev, [new_token]);
-            return true;
+            return None;
         }
     }
     // e.g. "EP 90", "#13"
@@ -231,14 +223,14 @@ fn fix_episode(tokens: &mut Tokens, token: &mut Token) -> bool {
             let mut new_token = token.clone() + next;
             new_token.set_unknown();
             tokens.replace(&token, [new_token]);
-            return true;
+            return None;
         }
     }
-    return false;
+    return Some((tokens, token));
 }
 
 /// e.g. "第 四 集"
-fn fix_chinese_episode(tokens: &mut Tokens, token: &mut Token) -> bool {
+fn fix_chinese_episode((tokens, token): Node) -> Option<Node> {
     let text = token.to_text();
     if regex_is_match!("^[0-9一二三四五六七八九十百千零]+$", &text) {
         let mut replace_token = token.clone();
@@ -255,8 +247,8 @@ fn fix_chinese_episode(tokens: &mut Tokens, token: &mut Token) -> bool {
         if replace_token != new_token {
             new_token.set_unknown();
             tokens.replace(&replace_token, [new_token]);
-            return true;
+            return None;
         }
     }
-    return false;
+    return Some((tokens, token));
 }

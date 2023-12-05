@@ -24,21 +24,19 @@ pub(crate) fn parse_title(element: &mut Element, tokens: &Tokens) {
     let start = tokens.first_unknown();
     let end = tokens.find_next_bracket_or_identifier(&start);
 
-    let tokens = if end.is_none() {
+    let tokens = match end.is_none() {
         // 如果 start 存在，end 不存在，则为整个名称都是 title
-        tokens.sub_tokens_start(&start)
-    } else {
-        tokens.sub_tokens(&start, &end)
+        true => tokens.sub_tokens_start(&start),
+        false => tokens.sub_tokens(&start, &end),
     };
 
     // token_end 处于 bracket_or_identifier 的位置
     let text = build_text(tokens, false);
 
-    if text.is_empty() {
+    match text.is_empty() {
         // 如果最终标题仍未找到，可能之前识别的 tag 就是标题
-        element.anime_title = element.release_group.take();
-    } else {
-        element.anime_title = Some(text);
+        true => element.anime_title = element.release_group.take(),
+        false => element.anime_title = Some(text),
     }
 }
 
@@ -48,13 +46,12 @@ fn build_text(tokens: Vec<Token>, keep_delimiter: bool) -> String {
 
     tokens.into_iter().for_each(|mut token| {
         if token.is_valid() {
-            if !keep_delimiter && regex_is_match!("^[,&/]$", &token.to_text()) {
-                text += &token.to_text();
-            } else if !keep_delimiter && token.is_delimiter() {
-                text += " ";
-            } else {
-                text += &token.to_text();
+            match (keep_delimiter, token.to_text()) {
+                (false, token) if regex_is_match!("^[,&/]$", &token) => text += &token,
+                (false, _) if token.is_delimiter() => text += " ",
+                (_, token) => text += &token,
             }
+
             if token.is_unknown() {
                 token.set_identifier();
             }
