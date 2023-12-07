@@ -1,5 +1,6 @@
+use std::sync::OnceLock;
+
 use anyhow::Result;
-use once_cell::sync::Lazy;
 use reqwest::Client;
 
 use database::entity::Downloader;
@@ -8,7 +9,10 @@ use crate::DownloadItem;
 
 mod handler;
 
-static CLIENT: Lazy<Client> = Lazy::new(|| Client::builder().cookie_store(true).build().unwrap());
+fn client() -> &'static Client {
+    static CLIENT: OnceLock<Client> = OnceLock::new();
+    CLIENT.get_or_init(|| Client::builder().cookie_store(true).build().unwrap())
+}
 
 /// qbittorrent client
 /// [技术规范](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1))

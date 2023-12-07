@@ -1,14 +1,17 @@
+use std::sync::OnceLock;
+
 use anyhow::{ensure, Context, Result};
 use lazy_regex::regex_captures;
-use once_cell::sync::Lazy;
 use reqwest::redirect::Policy;
 use reqwest::{Client, StatusCode};
 use scraper::{Html, Selector};
 
 use database::entity::{MikanTmdb, Torrent};
 
-static CLIENT: Lazy<Client> =
-    Lazy::new(|| Client::builder().redirect(Policy::none()).build().unwrap());
+fn client() -> &'static Client {
+    static CLIENT: OnceLock<Client> = OnceLock::new();
+    CLIENT.get_or_init(|| Client::builder().redirect(Policy::none()).build().unwrap())
+}
 
 pub(super) async fn mikan_direct_mapping(torrent: &mut Torrent) {
     // hash 值为空时无法映射，不处理
@@ -37,7 +40,7 @@ pub(super) async fn mikan_direct_mapping(torrent: &mut Torrent) {
 
 async fn parse_mikan_bangumi_id(hash: &str) -> Result<String> {
     let url = format!("https://mikanani.me/Home/Episode/{}", hash.to_lowercase());
-    let resp = CLIENT.get(url).send().await?;
+    let resp = client().get(url).send().await?;
     let resp = resp.error_for_status()?;
     ensure!(
         resp.status() != StatusCode::MOVED_PERMANENTLY && resp.status() != StatusCode::FOUND,
@@ -45,11 +48,13 @@ async fn parse_mikan_bangumi_id(hash: &str) -> Result<String> {
     );
     let text = resp.text().await?;
 
-    let html = Html::parse_document(&text);
+    static SELECTOR: OnceLock<Selector> = OnceLock::new();
     // language=JQuery-CSS
-    static SELECTOR: Lazy<Selector> =
-        Lazy::new(|| Selector::parse(r#"a[href^="/Home/Bangumi/"]"#).unwrap());
-    let element = html.select(&SELECTOR).next();
+    let selector =
+        SELECTOR.get_or_init(|| Selector::parse(r#"a[href^="/Home/Bangumi/"]"#).unwrap());
+
+    let html = Html::parse_document(&text);
+    let element = html.select(selector).next();
     let element = element.context("can't find mikan bangumi id")?;
     let href = element.value().attr("href").unwrap_or_default();
     let (_, bangumi, _group) = regex_captures!(r"^/Home/Bangumi/(\d+)(?:#(\d+))?$", href)

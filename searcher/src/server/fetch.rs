@@ -1,8 +1,8 @@
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use anyhow::Result;
 use bytes::Bytes;
-use once_cell::sync::Lazy;
 use reqwest::Client;
 use rss::Channel;
 use tokio::time::sleep;
@@ -74,8 +74,8 @@ async fn fetch_torznab(torznab_url: &str) -> Result<Vec<Torrent>> {
 }
 
 async fn request_xml(url: &str) -> Result<Bytes> {
-    static CLIENT: Lazy<Client> = Lazy::new(|| Client::default());
-    let resp = CLIENT.get(url).send().await?;
+    static CLIENT: OnceLock<Client> = OnceLock::new();
+    let resp = CLIENT.get_or_init(Client::default).get(url).send().await?;
     let resp = resp.error_for_status()?;
     Ok(resp.bytes().await?)
 }

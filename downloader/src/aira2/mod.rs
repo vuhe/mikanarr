@@ -1,5 +1,6 @@
+use std::sync::OnceLock;
+
 use anyhow::Result;
-use once_cell::sync::Lazy;
 use reqwest::Client;
 
 use database::entity::Downloader;
@@ -9,7 +10,10 @@ use crate::DownloadItem;
 mod handler;
 mod receiver;
 
-static CLIENT: Lazy<Client> = Lazy::new(|| Client::default());
+fn client() -> &'static Client {
+    static CLIENT: OnceLock<Client> = OnceLock::new();
+    CLIENT.get_or_init(Client::default)
+}
 
 /// aira2 client
 /// [技术规范](https://aria2.github.io/manual/en/html/aria2c.html#methods)

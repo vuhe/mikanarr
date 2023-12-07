@@ -1,18 +1,19 @@
 use std::str::FromStr;
+use std::sync::OnceLock;
 
 use anyhow::{bail, ensure, Context, Error, Result};
-use once_cell::sync::Lazy;
 use reqwest::{Client, Url};
 use serde::Deserialize;
 use sha1::{Digest, Sha1};
 
 /// 解析下载链接，获取 torrent hash 值
 pub(super) async fn parse_url_hash(url: &str) -> Result<String> {
-    static CLIENT: Lazy<Client> = Lazy::new(|| Client::default());
+    static CLIENT: OnceLock<Client> = OnceLock::new();
+
     let url = Url::parse(url)?;
     let resp = match url.scheme() {
         "magnet" => return parse_magnet_hash(url),
-        "http" | "https" => CLIENT.get(url).send().await?,
+        "http" | "https" => CLIENT.get_or_init(Client::default).get(url).send().await?,
         _ => bail!("Invalid URI scheme: {}", url.scheme()),
     };
     let bytes = resp.bytes().await?;

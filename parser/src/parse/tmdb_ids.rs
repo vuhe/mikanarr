@@ -1,12 +1,16 @@
+use std::sync::OnceLock;
+
 use anyhow::Result;
-use once_cell::sync::Lazy;
 
 use database::entity::Torrent;
 use tmdb::{Language, Tmdb};
 
 const TMDB_API: &str = env!("MK_TMDB_API");
 
-static TMDB: Lazy<Tmdb> = Lazy::new(|| Tmdb::default());
+fn tmdb() -> &'static Tmdb {
+    static TMDB: OnceLock<Tmdb> = OnceLock::new();
+    TMDB.get_or_init(Tmdb::default)
+}
 
 pub(super) async fn append_extra_ids(torrent: &mut Torrent) -> Result<()> {
     // tmdb id 为空，先解析 tmdb id
@@ -31,7 +35,7 @@ async fn search_by_title(torrent: &mut Torrent) -> Result<()> {
             ..Default::default()
         };
 
-        let req = TMDB.search_tv(param).await?;
+        let req = tmdb().search_tv(param).await?;
 
         match req.results.into_iter().next() {
             None => tracing::info!(
@@ -54,7 +58,7 @@ async fn search_extra_ids(tmdb_id: i64, torrent: &mut Torrent) -> Result<()> {
         ..Default::default()
     };
 
-    let req = TMDB.tv_series_detail(param).await?;
+    let req = tmdb().tv_series_detail(param).await?;
 
     torrent.title = req.name;
     torrent.tvdb_id = req.external_ids.tvdb_id;

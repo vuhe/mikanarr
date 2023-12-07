@@ -1,8 +1,7 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use anyhow::Result;
-use once_cell::sync::Lazy;
 use reqwest::Client;
 
 use database::entity::Downloader;
@@ -13,19 +12,25 @@ mod handler;
 mod receiver;
 mod sender;
 
-static CLIENT: Lazy<Client> = Lazy::new(|| Client::default());
-static SESSION: Lazy<SessionMap> = Lazy::new(|| SessionMap::default());
+fn client() -> &'static Client {
+    static CLIENT: OnceLock<Client> = OnceLock::new();
+    CLIENT.get_or_init(Client::default)
+}
 
-#[derive(Default)]
-struct SessionMap(Mutex<HashMap<u32, Arc<str>>>);
+struct Session;
 
-impl SessionMap {
+impl Session {
+    fn inner(&self) -> &Mutex<HashMap<u32, Arc<str>>> {
+        static SESSION: OnceLock<Mutex<HashMap<u32, Arc<str>>>> = OnceLock::new();
+        SESSION.get_or_init(Default::default)
+    }
+
     fn get(&self, id: u32) -> Option<Arc<str>> {
-        self.0.lock().unwrap().get(&id).map(|it| it.clone())
+        self.inner().lock().unwrap().get(&id).map(|it| it.clone())
     }
 
     fn set(&self, id: u32, session: &str) {
-        self.0.lock().unwrap().insert(id, session.into());
+        self.inner().lock().unwrap().insert(id, session.into());
     }
 }
 

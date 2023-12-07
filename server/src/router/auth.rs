@@ -1,7 +1,6 @@
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use cached::{Cached, TimedSizedCache};
-use once_cell::sync::Lazy;
 use poem::http::header::AUTHORIZATION;
 use poem::web::Json;
 use poem::{handler, Endpoint, IntoResponse, Request, Response, Result};
@@ -12,10 +11,14 @@ use database::entity::Config;
 
 use super::ResultResp;
 
-static SESSION: Lazy<Mutex<TimedSizedCache<String, ()>>> = Lazy::new(|| {
-    let cache = TimedSizedCache::with_size_and_lifespan_and_refresh(5, 30 * 60, true);
-    Mutex::new(cache)
-});
+fn session() -> MutexGuard<'static, TimedSizedCache<String, ()>> {
+    static SESSION: OnceLock<Mutex<TimedSizedCache<String, ()>>> = OnceLock::new();
+    let mutex = SESSION.get_or_init(|| {
+        let cache = TimedSizedCache::with_size_and_lifespan_and_refresh(5, 30 * 60, true);
+        Mutex::new(cache)
+    });
+    mutex.lock().unwrap()
+}
 
 #[derive(Deserialize)]
 struct LoginForm {
@@ -37,7 +40,7 @@ pub(super) async fn login(Json(res): Json<LoginForm>) -> Json<ResultResp<String>
 
     tracing::info!("login user: {}", res.account);
     let token = Uuid::new_v4().to_string();
-    SESSION.lock().unwrap().cache_set(token.clone(), ());
+    session().cache_set(token.clone(), ());
     Json(ResultResp::from(Ok(token)))
 }
 
@@ -66,7 +69,7 @@ pub(super) async fn auth<E: Endpoint>(next: E, req: Request) -> Result<Response>
         let token = req.header(AUTHORIZATION);
         let token = token.and_then(|it| it.strip_prefix("Bearer "));
         let token_exist = token
-            .map(|it| SESSION.lock().unwrap().cache_get(it).is_some())
+            .map(|it| session().cache_get(it).is_some())
             .unwrap_or(false);
 
         if !token_exist {

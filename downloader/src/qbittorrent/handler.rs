@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{DownloadItem, ItemStatus, DEFAULT_CATEGORY};
 
-use super::{CLIENT, QB};
+use super::{client, QB};
 
 /// 下载 torrent 参数
 #[derive(Serialize)]
@@ -51,13 +51,13 @@ impl From<TorrentInfo> for DownloadItem {
 impl QB {
     pub(super) async fn app_version(&self) -> Result<()> {
         let url = format!("{}/api/v2/app/version", self.url);
-        let req = CLIENT.get(url);
+        let req = client().get(url);
         self.api_without_resp(req).await
     }
 
     pub(crate) async fn add_torrent(&self, torrent: &[u8], dir: &str) -> Result<()> {
         let url = format!("{}/api/v2/torrents/add", self.url);
-        let req = CLIENT.post(url).form(&TorrentAddArgs {
+        let req = client().post(url).form(&TorrentAddArgs {
             torrents: torrent,
             savepath: dir,
             category: DEFAULT_CATEGORY,
@@ -68,20 +68,20 @@ impl QB {
     pub(super) async fn torrent_info(&self) -> Result<Vec<TorrentInfo>> {
         let url = format!("{}/api/v2/torrents/info", self.url);
         static FIXED_PARAM: [(&str, &str); 1] = [("category", DEFAULT_CATEGORY)];
-        let req = CLIENT.get(url).query(&FIXED_PARAM);
+        let req = client().get(url).query(&FIXED_PARAM);
         Ok(self.api(req).await?)
     }
 
     pub(super) async fn torrent_files(&self, id: &str) -> Result<Vec<FileInfo>> {
         let url = format!("{}/api/v2/torrents/files", self.url);
-        let req = CLIENT.get(url).query(&[("hash", id)]);
+        let req = client().get(url).query(&[("hash", id)]);
         Ok(self.api(req).await?)
     }
 
     pub(crate) async fn rename_file(&self, id: &str, old_path: &str, new_path: &str) -> Result<()> {
         let url = format!("{}/api/v2/torrents/renameFile", self.url);
         let param = [("hash", id), ("oldPath", old_path), ("newPath", new_path)];
-        let req = CLIENT.post(url).form(&param);
+        let req = client().post(url).form(&param);
         self.api_without_resp(req).await
     }
 }
@@ -97,7 +97,7 @@ impl QB {
             ("password", password.unwrap_or_default()),
         ];
 
-        let req = CLIENT.post(url).form(&param);
+        let req = client().post(url).form(&param);
         req.send().await?.error_for_status()?;
         Ok(())
     }

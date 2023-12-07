@@ -5,7 +5,7 @@ use serde::de::DeserializeOwned;
 
 use super::receiver::{AddTorrentResp, PortTestResp, Response, TorrentInfo, TorrentList};
 use super::sender::Request;
-use super::{CLIENT, SESSION, TR};
+use super::{client, Session, TR};
 
 impl TR {
     pub(super) async fn port_test(&self) -> Result<()> {
@@ -51,18 +51,18 @@ impl TR {
         let session_id = session_id
             .to_str()
             .context("Can't parse Transmission-Session-Id")?;
-        SESSION.set(self.id, session_id);
+        Session.set(self.id, session_id);
         Ok(())
     }
 
     fn build_req(&self, request: Request) -> RequestBuilder {
-        let mut req = CLIENT.post(&self.url);
+        let mut req = client().post(&self.url);
         let username = self.username.as_ref();
         if let Some(username) = username.filter(|it| !it.is_empty()) {
             let password = self.password.as_ref();
             req = req.basic_auth(username, password.filter(|it| !it.is_empty()));
         }
-        if let Some(id) = SESSION.get(self.id).filter(|it| !it.is_empty()) {
+        if let Some(id) = Session.get(self.id).filter(|it| !it.is_empty()) {
             req = req.header("X-Transmission-Session-Id", id.as_ref());
         }
         req.json(&request)
