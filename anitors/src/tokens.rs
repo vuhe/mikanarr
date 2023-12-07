@@ -71,10 +71,6 @@ impl Token {
         Self(Some(InnerRef(Arc::new(RefCell::new(inner)))))
     }
 
-    pub fn none() -> Self {
-        Token(None)
-    }
-
     pub fn bracket_open(text: Text, enclosed: bool) -> Self {
         Token::new(BracketOpen, text, enclosed)
     }
@@ -95,32 +91,27 @@ impl Token {
         self.0.is_none()
     }
 
-    pub fn is_unknown(&self) -> bool {
+    fn eq_category(&self, category: Category) -> bool {
         self.0
             .as_ref()
-            .map(|it| it.category() == Unknown)
+            .map(|it| it.category() == category)
             .unwrap_or(false)
+    }
+
+    pub fn is_unknown(&self) -> bool {
+        self.eq_category(Unknown)
     }
 
     pub fn is_open_bracket(&self) -> bool {
-        self.0
-            .as_ref()
-            .map(|it| it.category() == BracketOpen)
-            .unwrap_or(false)
+        self.eq_category(BracketOpen)
     }
 
     pub fn is_closed_bracket(&self) -> bool {
-        self.0
-            .as_ref()
-            .map(|it| it.category() == BracketClosed)
-            .unwrap_or(false)
+        self.eq_category(BracketClosed)
     }
 
     pub fn is_delimiter(&self) -> bool {
-        self.0
-            .as_ref()
-            .map(|it| it.category() == Delimiter)
-            .unwrap_or(false)
+        self.eq_category(Delimiter)
     }
 
     pub fn is_valid(&self) -> bool {
@@ -144,14 +135,6 @@ impl Token {
 
     pub fn set_identifier(&mut self) {
         self.0.as_mut().map(|it| it.set_category(Identifier));
-    }
-
-    /// 根据提供的 text 进行 deep clone
-    fn deep_clone(&self, text: Text) -> Self {
-        self.0
-            .as_ref()
-            .map(|it| Token::new(it.category(), text, it.enclosed()))
-            .unwrap_or_else(|| Token::none())
     }
 }
 
@@ -205,31 +188,25 @@ impl PartialEq<Token> for Token {
 
 impl Add for Token {
     type Output = Token;
-
-    fn add(self, rhs: Token) -> Self::Output {
-        let mut rhs = rhs;
+    fn add(self, mut rhs: Token) -> Self::Output {
         self + &mut rhs
     }
 }
 
 impl Add<&mut Token> for Token {
     type Output = Token;
-
     fn add(self, rhs: &mut Token) -> Self::Output {
-        return if let Some(rhs) = rhs.0.as_mut() {
-            if let Some(lhs) = self.0.as_ref() {
-                let text = lhs.text() + rhs.text();
-                let new_token = self.deep_clone(text);
+        match (self.0.as_ref(), rhs.0.as_mut()) {
+            (Some(lhs), Some(rhs)) => {
                 rhs.set_category(Invalid);
-                new_token
-            } else {
-                let new_token = self.deep_clone(rhs.text());
-                rhs.set_category(Invalid);
-                new_token
+                Token::new(lhs.category(), lhs.text() + rhs.text(), lhs.enclosed())
             }
-        } else {
-            self
-        };
+            (None, Some(rhs)) => {
+                rhs.set_category(Invalid);
+                Token::new(rhs.category(), rhs.text(), rhs.enclosed())
+            }
+            _ => self,
+        }
     }
 }
 
@@ -280,10 +257,8 @@ impl Tokens {
 
     fn sub_vec(&self, begin: usize, end: usize) -> Vec<Token> {
         if begin <= end {
-            (&self.0[begin..end])
-                .iter()
-                .map(|it| Token::from(it))
-                .collect()
+            let end = std::cmp::min(end, self.0.len());
+            (&self.0[begin..end]).iter().map(Token::from).collect()
         } else {
             Vec::default()
         }
@@ -309,13 +284,13 @@ impl Tokens {
 
     /// tokens 的 [0, len) 切片
     pub fn all_tokens(&self) -> Vec<Token> {
-        self.0.iter().map(|it| Token::from(it)).collect()
+        self.0.iter().map(Token::from).collect()
     }
 
     /// tokens 的未识别 token 切片
     pub fn unknown_tokens(&self) -> Vec<Token> {
         let it = self.0.iter().filter(|it| it.category() == Unknown);
-        it.map(|it| Token::from(it)).collect()
+        it.map(Token::from).collect()
     }
 
     /// tokens 的 [start, end) 切片

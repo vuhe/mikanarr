@@ -91,9 +91,15 @@ impl Deref for Text {
 impl Add for Text {
     type Output = Self;
     fn add(self, rhs: Self) -> Self::Output {
-        let str = (&*self).to_owned() + &*rhs;
-        let len = str.len();
-        Self(Str::String(str.into()), 0, len)
+        match (&*self, &*rhs) {
+            (left, _) if left.is_empty() => return rhs,
+            (_, right) if right.is_empty() => return self,
+            (left, right) => {
+                let str = left.to_owned() + right;
+                let len = str.len();
+                Self(Str::String(str.into()), 0, len)
+            }
+        }
     }
 }
 
