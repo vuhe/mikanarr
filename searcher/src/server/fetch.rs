@@ -18,8 +18,8 @@ pub(crate) async fn fetch_and_save_torrents() {
         let indexers = match Indexer::find_all_enable().await {
             Ok(it) => it,
             Err(e) => {
-                tracing::debug!("{e:#?}");
-                tracing::warn!("get Indexer from database error, try again later: {e}");
+                log::debug!("{e:#?}");
+                log::warn!("get Indexer from database error, try again later: {e}");
                 Vec::default()
             }
         };
@@ -32,16 +32,16 @@ pub(crate) async fn fetch_and_save_torrents() {
             let torrents = match torrents {
                 Ok(it) => it,
                 Err(e) => {
-                    tracing::debug!("{e:#?}");
-                    tracing::warn!("fetch `{}` torrent error, skip it: {e}", indexer.name);
+                    log::debug!("{e:#?}");
+                    log::warn!("fetch `{}` torrent error, skip it: {e}", indexer.name);
                     continue;
                 }
             };
             for torrent in torrents {
                 let torrent_name = torrent.name.clone();
                 if let Err(e) = parse_info_and_save(torrent).await {
-                    tracing::debug!("{e:#?}");
-                    tracing::warn!("parse `{torrent_name}` torrent error, skip it: {e}");
+                    log::debug!("{e:#?}");
+                    log::warn!("parse `{torrent_name}` torrent error, skip it: {e}");
                 }
             }
         }

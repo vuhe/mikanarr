@@ -1,5 +1,4 @@
-use lazy_regex::{regex, regex_is_match};
-use regex::Regex;
+use lazy_regex::{regex, regex_is_match, Regex};
 
 use crate::tokens::{Token, Tokens};
 

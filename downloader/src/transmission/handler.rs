@@ -1,7 +1,8 @@
 use anyhow::{bail, ensure, Context, Result};
-use base64::Engine;
 use reqwest::{RequestBuilder, Response as Resp, StatusCode};
 use serde::de::DeserializeOwned;
+
+use encode::base64_encode;
 
 use super::receiver::{AddTorrentResp, PortTestResp, Response, TorrentInfo, TorrentList};
 use super::sender::Request;
@@ -16,8 +17,7 @@ impl TR {
     }
 
     pub(super) async fn add_torrent(&self, torrent: &[u8], dir: &str) -> Result<String> {
-        let metainfo = base64::engine::general_purpose::STANDARD.encode(torrent);
-        let req = self.build_req(Request::torrent_add(metainfo, dir));
+        let req = self.build_req(Request::torrent_add(base64_encode(torrent), dir));
         let resp: AddTorrentResp = self.rpc(req).await?;
         Ok(resp.into_hash_string())
     }

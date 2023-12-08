@@ -1,7 +1,8 @@
 use anyhow::Result;
 use sea_orm::entity::prelude::*;
 use sea_orm::IntoActiveModel;
-use sha256::Sha256Digest;
+
+use encode::sha256_encode;
 
 use crate::app_data;
 
@@ -44,9 +45,8 @@ impl Config {
         save_config("username", val).await
     }
 
-    pub async fn set_password<D: Sha256Digest>(&self, val: Option<D>) -> Result<()> {
-        let password = val.map(|it| sha256::digest(it));
-        save_config("password", password).await
+    pub async fn set_password<D: AsRef<[u8]>>(&self, val: Option<D>) -> Result<()> {
+        save_config("password", val.map(sha256_encode)).await
     }
 
     pub async fn set_auth_intranet(&self, val: Option<bool>) -> Result<()> {

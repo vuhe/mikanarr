@@ -24,7 +24,7 @@ fn api_route() -> Route {
 
 fn static_files() -> StaticFilesEndpoint {
     let res_data_path = "./resources/dist";
-    tracing::info!("webui dir path: `{}`", res_data_path);
+    log::info!("webui dir path: `{}`", res_data_path);
     StaticFilesEndpoint::new(res_data_path)
         .show_files_listing()
         .index_file("index.html")

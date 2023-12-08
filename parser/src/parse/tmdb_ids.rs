@@ -38,7 +38,7 @@ async fn search_by_title(torrent: &mut Torrent) -> Result<()> {
         let req = tmdb().search_tv(param).await?;
 
         match req.results.into_iter().next() {
-            None => tracing::info!(
+            None => log::info!(
                 "tmdb did not find any results related to `{}`",
                 torrent.title
             ),

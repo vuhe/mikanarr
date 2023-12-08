@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use database::entity::Config;
+use encode::sha256_encode;
 
 use super::ResultResp;
 
@@ -34,11 +35,11 @@ pub(super) async fn login(Json(res): Json<LoginForm>) -> Json<ResultResp<String>
         return Json(ResultResp::from(421));
     }
     // 422 密码错误
-    if sha256::digest(res.password) != Config.password().await {
+    if sha256_encode(res.password) != Config.password().await {
         return Json(ResultResp::from(422));
     }
 
-    tracing::info!("login user: {}", res.account);
+    log::info!("login user: {}", res.account);
     let token = Uuid::new_v4().to_string();
     session().cache_set(token.clone(), ());
     Json(ResultResp::from(Ok(token)))

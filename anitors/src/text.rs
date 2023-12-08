@@ -4,8 +4,7 @@ use std::hash::{Hash, Hasher};
 use std::ops::{Add, Deref};
 use std::sync::Arc;
 
-use lazy_regex::regex_is_match;
-use regex::Regex;
+use lazy_regex::{regex_is_match, Regex};
 
 #[derive(Clone)]
 enum Str {

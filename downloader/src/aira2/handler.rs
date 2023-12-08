@@ -1,8 +1,9 @@
 use anyhow::{bail, Result};
-use base64::Engine;
 use serde::de::{DeserializeOwned, IgnoredAny};
 use serde::Serialize;
 use serde_json::{json, Value};
+
+use encode::base64_encode;
 
 use super::receiver::{DownloadStatus, Response};
 use super::{client, AR};
@@ -45,9 +46,8 @@ impl AR {
     }
 
     pub(super) async fn add_torrent(&self, torrent: &[u8], dir: &str) -> Result<String> {
-        let torrent = base64::engine::general_purpose::STANDARD.encode(torrent);
         self.rpc("aria2.addTorrent", move |param| {
-            param.push([torrent].as_slice().into());
+            param.push([base64_encode(torrent)].as_slice().into());
             param.push(json!({ "dir": dir }));
         })
         .await

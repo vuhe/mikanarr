@@ -28,7 +28,7 @@ async fn res_data() -> &'static DatabaseConnection {
     }
 
     let res_data_path = "./resources/res.sqlite";
-    tracing::info!("res database path: `{}`", res_data_path);
+    log::info!("res database path: `{}`", res_data_path);
     let res_data_url = format!("sqlite:file:{}?mode=ro", res_data_path);
 
     let mut opt = ConnectOptions::new(res_data_url);
@@ -53,7 +53,7 @@ async fn app_data() -> &'static DatabaseConnection {
         Ok(it) => Path::new(&it).join("data.sqlite"),
         Err(_) => Path::new("./data").join("data.sqlite"),
     };
-    tracing::info!("app database path: `{}`", app_data_path.display());
+    log::info!("app database path: `{}`", app_data_path.display());
     let app_data_url = format!("sqlite:file:{}?mode=rwc", app_data_path.display());
 
     let mut opt = ConnectOptions::new(app_data_url);
@@ -84,26 +84,26 @@ async fn reset_password() {
     let mut file = match File::open(app_data_path) {
         Ok(it) => BufReader::new(it),
         Err(e) => {
-            tracing::warn!("open reset-password.txt fail: {}", e);
+            log::warn!("open reset-password.txt fail: {}", e);
             return;
         }
     };
 
     let mut password = String::new();
     if let Err(e) = file.read_line(&mut password) {
-        tracing::warn!("read reset-password.txt fail: {}", e);
+        log::warn!("read reset-password.txt fail: {}", e);
         return;
     }
 
     let password = password.trim();
     if password.is_empty() {
-        tracing::warn!("reset-password is empty");
+        log::warn!("reset-password is empty");
         return;
     }
 
     match entity::Config.set_password(Some(password)).await {
-        Ok(_) => tracing::info!("reset `{}` password: `{}`", "admin", password),
-        Err(e) => tracing::warn!("save new password error: {}", e),
+        Ok(_) => log::info!("reset `{}` password: `{}`", "admin", password),
+        Err(e) => log::warn!("save new password error: {}", e),
     }
 }
 

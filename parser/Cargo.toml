@@ -7,15 +7,13 @@ description = "解析并缓存 torrent 文件名及其相关信息"
 [dependencies]
 anitors = { path = "../anitors" }
 database = { path = "../database" }
+encode = { path = "../encode" }
 tmdb = { path = "../tmdb" }
 anyhow = "1"
-bt_bencode = "0.7"
-sha1 = "0.10"
-sha256 = "1"
-hex = "0.4"
-scraper = "0.18"
 lazy-regex = "3"
-tracing = "0.1"
+log = "0.4"
+bt_bencode = "0.7"
+scraper = { version = "0.18", default-features = false }
 serde = { version = "1", features = ["derive"] }
 reqwest = { version = "0.11", features = ["cookies", "json"] }
 

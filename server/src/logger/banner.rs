@@ -8,5 +8,5 @@ static BANNER: &str = r"
 ";
 
 pub(super) fn print_banner() {
-    tracing::info!("version: {} {}", env!("CARGO_PKG_VERSION"), BANNER);
+    log::info!("version: {} {}", env!("CARGO_PKG_VERSION"), BANNER);
 }

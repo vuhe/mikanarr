@@ -4,7 +4,8 @@ use std::sync::OnceLock;
 use anyhow::{bail, ensure, Context, Error, Result};
 use reqwest::{Client, Url};
 use serde::Deserialize;
-use sha1::{Digest, Sha1};
+
+use encode::{sha1_encode, sha256_encode};
 
 /// 解析下载链接，获取 torrent hash 值
 pub(super) async fn parse_url_hash(url: &str) -> Result<String> {
@@ -103,13 +104,13 @@ enum InfoHash {
 
 impl InfoHash {
     fn from_v1_bytes(bytes: &[u8]) -> Self {
-        let hash = hex::encode(Sha1::digest(bytes));
+        let hash = sha1_encode(bytes);
         debug_assert!(hash.len() == 40);
         Self::V1(hash)
     }
 
     fn from_v2_bytes(bytes: &[u8]) -> Self {
-        let hash = sha256::digest(bytes);
+        let hash = sha256_encode(bytes);
         debug_assert!(hash.len() == 64);
         Self::V2(hash)
     }

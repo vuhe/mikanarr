@@ -3,6 +3,7 @@ members = [
     "anitors",
     "database",
     "downloader",
+    "encode",
     "manager",
     "parser",
     "searcher",

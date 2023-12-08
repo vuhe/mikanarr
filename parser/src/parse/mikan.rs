@@ -22,14 +22,14 @@ pub(super) async fn mikan_direct_mapping(torrent: &mut Torrent) {
     let bangumi_id = match parse_mikan_bangumi_id(&torrent.id).await {
         Ok(it) => it,
         Err(e) => {
-            tracing::debug!("{e:#?}");
-            tracing::warn!("{e}");
+            log::debug!("{e:#?}");
+            log::warn!("{e}");
             return;
         }
     };
 
     let Some(tmdb) = MikanTmdb::find_by_bangumi_id(&bangumi_id).await else {
-        tracing::info!("mikan bangumi({bangumi_id}) no matching data, use other parser.");
+        log::info!("mikan bangumi({bangumi_id}) no matching data, use other parser.");
         return;
     };
 
