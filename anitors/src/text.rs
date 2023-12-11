@@ -4,7 +4,7 @@ use std::hash::{Hash, Hasher};
 use std::ops::{Add, Deref};
 use std::sync::Arc;
 
-use lazy_regex::{regex_is_match, Regex};
+use lazy_regex::Regex;
 
 #[derive(Clone)]
 enum Str {
@@ -48,11 +48,6 @@ impl Text {
         self.is_not_empty() && self.chars().all(|it| it.is_ascii_digit())
     }
 
-    /// 阿拉伯数字和中文数字
-    pub fn has_number(&self) -> bool {
-        regex_is_match!(r"[\d一二三四五六七八九十百千零]+", self)
-    }
-
     pub fn split_once(&self, pat: &Regex) -> Option<(Self, Self, Self)> {
         pat.find(self).map(|it| {
             (
@@ -61,10 +56,6 @@ impl Text {
                 self.sub_str(it.end(), self.len()),
             )
         })
-    }
-
-    pub fn to_u16(&self) -> Option<u16> {
-        self.parse().ok()
     }
 }
 
@@ -76,7 +67,10 @@ impl Default for Text {
 
 impl<T: AsRef<str>> From<T> for Text {
     fn from(value: T) -> Self {
-        Self(Str::String(value.as_ref().into()), 0, value.as_ref().len())
+        match value.as_ref() {
+            "" => Self(Str::Slice(""), 0, 0),
+            str => Self(Str::String(str.into()), 0, str.len()),
+        }
     }
 }
 

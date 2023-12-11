@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use lazy_regex::{regex_captures, regex_is_match};
 
-use crate::helper::chinese_or_ascii_num_to_u16;
+use crate::covert_number::AutoParseU16;
 use crate::tokens::{Token, Tokens};
 use crate::Element;
 
@@ -29,7 +29,7 @@ pub(crate) fn parse_year(element: &mut Element, tokens: &Tokens) {
     let isolated_num = unknown_tokens
         .into_iter()
         .find(|it| it.to_text().is_ascii_digit() && is_token_isolated(tokens, it))
-        .filter(|it| YEAR_RANGE.contains(&it.to_text().to_u16().unwrap_or(0)));
+        .filter(|it| YEAR_RANGE.contains(&it.to_text().parse().unwrap_or(0)));
 
     let year = isolated_num.or_else(|| {
         // 未找到括号单数字，尝试直接使用没有括号的数字
@@ -38,7 +38,7 @@ pub(crate) fn parse_year(element: &mut Element, tokens: &Tokens) {
             .unknown_tokens()
             .into_iter()
             .filter(|it| it.to_text().is_ascii_digit())
-            .filter(|it| YEAR_RANGE.contains(&it.to_text().to_u16().unwrap_or(0)))
+            .filter(|it| YEAR_RANGE.contains(&it.to_text().parse().unwrap_or(0)))
             .rev()
             .next()
     });
@@ -141,12 +141,9 @@ fn match_single_episode(element: &mut Element, token: &mut Token) {
     }
 
     if !regex_is_match!("[全共].+[集话話期]|[集话話期]全", &token.to_text()) {
-        if let Some((_, e)) = regex_captures!(
-            "第?([0-9一二三四五六七八九十百千零]+)[集话話期]",
-            &token.to_text()
-        ) {
+        if let Some((_, e)) = regex_captures!("第?(.+)[集话話期]", &token.to_text()) {
             token.set_identifier();
-            if let Some(ep) = chinese_or_ascii_num_to_u16(e) {
+            if let Some(ep) = e.auto_parse_u16() {
                 element.episode_number = Some(format!("E{ep}"));
             }
         }
@@ -179,11 +176,9 @@ fn match_single_season(element: &mut Element, token: &mut Token) {
     }
 
     if !regex_is_match!("[全共].+季|季全", &token.to_text()) {
-        if let Some((_, s)) =
-            regex_captures!("第?([0-9一二三四五六七八九十百千零]+)季", &token.to_text())
-        {
+        if let Some((_, s)) = regex_captures!("第?(.+)季", &token.to_text()) {
             token.set_identifier();
-            if let Some(se) = chinese_or_ascii_num_to_u16(s) {
+            if let Some(se) = s.auto_parse_u16() {
                 element.anime_season = Some(format!("S{se}"));
             }
         }
@@ -230,15 +225,13 @@ fn match_season_and_episode(element: &mut Element, token: &mut Token) {
     }
 
     if !regex_is_match!("[全共].+[集话話期季]|[集话話期季]全", &token.to_text()) {
-        if let Some((_, s, e)) = regex_captures!(
-            "第?([0-9一二三四五六七八九十百千零]+)季第?([0-9一二三四五六七八九十百千零]+)[集话話期]",
-            &token.to_text()
-        ) {
+        if let Some((_, s, e)) = regex_captures!("第?(.+)季第?(.+)[集话話期]", &token.to_text())
+        {
             token.set_identifier();
-            if let Some(se) = chinese_or_ascii_num_to_u16(s) {
+            if let Some(se) = s.auto_parse_u16() {
                 element.anime_season = Some(format!("S{se}"));
             }
-            if let Some(ep) = chinese_or_ascii_num_to_u16(e) {
+            if let Some(ep) = e.auto_parse_u16() {
                 element.episode_number = Some(format!("E{ep}"));
             }
         }
@@ -283,7 +276,7 @@ fn match_number_sign(element: &mut Element, token: &mut Token) {
 
 /// 按大小猜测集数，准确度不高, e.g. "01 (176)", "29 (04)"
 fn match_equivalent_num(element: &mut Element, tokens: &Tokens, token: &mut Token) {
-    let number = token.to_text().to_u16().unwrap_or(1900);
+    let number = token.to_text().parse().unwrap_or(1900);
     if is_token_isolated(tokens, token) || EP_NUM_MAX < number {
         return;
     }
@@ -296,7 +289,7 @@ fn match_equivalent_num(element: &mut Element, tokens: &Tokens, token: &mut Toke
 
     let mut next = tokens.find_next_enclosed_not_delimiter(&next);
     // 检查括号内是否为 (数字)
-    let next_num = next.to_text().to_u16().unwrap_or(1900);
+    let next_num = next.to_text().parse().unwrap_or(1900);
     if !(next.is_unknown() && is_token_isolated(tokens, &next) && next_num <= EP_NUM_MAX) {
         return;
     }
