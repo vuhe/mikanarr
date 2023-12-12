@@ -5,8 +5,6 @@ use anyhow::Result;
 use database::entity::Torrent;
 use tmdb::{Language, Tmdb};
 
-const TMDB_API: &str = env!("MK_TMDB_API");
-
 fn tmdb() -> &'static Tmdb {
     static TMDB: OnceLock<Tmdb> = OnceLock::new();
     TMDB.get_or_init(Tmdb::default)
@@ -29,13 +27,7 @@ pub(super) async fn append_extra_ids(torrent: &mut Torrent) -> Result<()> {
 async fn search_by_title(torrent: &mut Torrent) -> Result<()> {
     // 之前标题解析成功时查询
     if !torrent.title.is_empty() {
-        let param = tmdb::search::tv::Param {
-            api_key: TMDB_API,
-            query: &torrent.title,
-            ..Default::default()
-        };
-
-        let req = tmdb().search_tv(param).await?;
+        let req = tmdb().search_tv(&torrent.title).execute().await?;
 
         match req.results.into_iter().next() {
             None => log::info!(
@@ -50,15 +42,12 @@ async fn search_by_title(torrent: &mut Torrent) -> Result<()> {
 }
 
 async fn search_extra_ids(tmdb_id: i64, torrent: &mut Torrent) -> Result<()> {
-    let param = tmdb::tv_series::details::Param {
-        api_key: TMDB_API,
-        series_id: tmdb_id,
-        append_to_response: Some("external_ids"),
-        language: Some(Language::ZhCn),
-        ..Default::default()
-    };
-
-    let req = tmdb().tv_series_detail(param).await?;
+    let req = tmdb()
+        .tv_series_detail(tmdb_id)
+        .append_to_response("external_ids")
+        .language(Language::ZhCn)
+        .execute()
+        .await?;
 
     torrent.title = req.name;
     torrent.tvdb_id = req.external_ids.tvdb_id;

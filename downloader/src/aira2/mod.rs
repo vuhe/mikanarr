@@ -34,8 +34,7 @@ impl AR {
     }
 
     pub(crate) async fn download(&self, torrent: &[u8], dir: &str) -> Result<()> {
-        let _ = self.add_torrent(torrent, dir).await?;
-        Ok(())
+        self.add_torrent(torrent, dir).await.map(|_| ())
     }
 
     pub(crate) async fn download_list(&self) -> Result<Vec<DownloadItem>> {

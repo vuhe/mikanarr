@@ -4,6 +4,9 @@ use serde::Serialize;
 pub mod search;
 pub mod tv_series;
 
+/// tmdb api
+const TMDB_API: &str = env!("MK_TMDB_API");
+
 /// tmdb 语言代码
 #[derive(Serialize, Debug)]
 pub enum Language {
