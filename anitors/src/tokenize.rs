@@ -5,22 +5,21 @@ use crate::tokens::{Token, Tokens};
 /// 将创建的 token 切分
 pub(crate) fn tokenizer(tokens: &mut Tokens) {
     split_brackets(tokens);
-    let mut unknown_tokens = tokens.unknown_tokens();
-    unknown_tokens.iter_mut().for_each(|token| {
+    for token in tokens.unknown_tokens().collect::<Vec<_>>() {
         tokenize_year(tokens, &token);
         tokenize_tv_number(tokens, &token);
         remove_size(tokens, &token);
         remove_date(tokens, &token);
         remove_invalid_tag(tokens, &token);
         remove_ignore_type(tokens, &token);
-    });
+    }
     split_delimiter(tokens);
     fix_split(tokens);
 }
 
 /// 按括号将 token 分割，并区分 token 是否在括号内
 fn split_brackets(tokens: &mut Tokens) {
-    for token in tokens.unknown_tokens() {
+    for token in tokens.unknown_tokens().collect::<Vec<_>>() {
         let mut result = Vec::new();
         let mut next = token.to_text();
         let mut enclosed = false;
@@ -55,7 +54,7 @@ fn split_brackets(tokens: &mut Tokens) {
 
 /// 切分剩余所有的分隔符
 fn split_delimiter(tokens: &mut Tokens) {
-    for token in tokens.unknown_tokens() {
+    for token in tokens.unknown_tokens().collect::<Vec<_>>() {
         let mut result = Vec::new();
         let mut next = token.to_text();
         let enclosed = token.enclosed();
@@ -150,7 +149,7 @@ type Node<'a> = (&'a mut Tokens, &'a mut Token);
 
 /// 修正过度切分的 token
 fn fix_split(tokens: &mut Tokens) {
-    for mut token in tokens.all_tokens() {
+    for mut token in tokens.all_tokens().collect::<Vec<_>>() {
         [(&mut *tokens, &mut token)]
             .into_iter()
             .filter_map(fix_audio_language)

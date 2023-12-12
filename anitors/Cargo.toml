@@ -6,4 +6,4 @@ description = "基于 Anitomy 的动漫文件名解析器"
 
 [dependencies]
 lazy-regex = "3"
-chinese-number = "0.7"
+chinese-number = { version = "0.7", default-features = false, features = ["std", "chinese-to-number"] }

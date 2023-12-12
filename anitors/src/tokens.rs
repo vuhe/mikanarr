@@ -255,13 +255,9 @@ impl Tokens {
         Token::from(item)
     }
 
-    fn sub_vec(&self, begin: usize, end: usize) -> Vec<Token> {
-        if begin <= end {
-            let end = std::cmp::min(end, self.0.len());
-            (&self.0[begin..end]).iter().map(Token::from).collect()
-        } else {
-            Vec::default()
-        }
+    fn sub_vec(&self, begin: usize, end: usize) -> impl Iterator<Item = Token> + '_ {
+        let len = end.saturating_sub(begin);
+        self.0.iter().skip(begin).take(len).map(Token::from)
     }
 }
 
@@ -283,25 +279,25 @@ impl Tokens {
     }
 
     /// tokens 的 [0, len) 切片
-    pub fn all_tokens(&self) -> Vec<Token> {
-        self.0.iter().map(Token::from).collect()
+    pub fn all_tokens(&self) -> impl Iterator<Item = Token> + '_ {
+        self.0.iter().map(Token::from)
     }
 
     /// tokens 的未识别 token 切片
-    pub fn unknown_tokens(&self) -> Vec<Token> {
+    pub fn unknown_tokens(&self) -> impl Iterator<Item = Token> + '_ {
         let it = self.0.iter().filter(|it| it.category() == Unknown);
-        it.map(Token::from).collect()
+        it.map(Token::from)
     }
 
-    /// tokens 的 [start, end) 切片
-    pub fn sub_tokens(&self, start: &Token, end: &Token) -> Vec<Token> {
-        let begin = self.find_idx(start).unwrap_or(usize::MAX);
-        let end = self.find_idx(end).unwrap_or(0);
+    /// tokens 的 [l, r) 切片
+    pub fn sub_tokens<'a>(&'a self, l: &Token, r: &Token) -> impl Iterator<Item = Token> + 'a {
+        let begin = self.find_idx(l).unwrap_or(usize::MAX);
+        let end = self.find_idx(r).unwrap_or(0);
         self.sub_vec(begin, end)
     }
 
     /// tokens 的 [start, len) 切片
-    pub fn sub_tokens_start(&self, start: &Token) -> Vec<Token> {
+    pub fn sub_tokens_start<'a>(&'a self, start: &Token) -> impl Iterator<Item = Token> + 'a {
         let begin = self.find_idx(start).unwrap_or(usize::MAX);
         let end = self.0.len();
         self.sub_vec(begin, end)

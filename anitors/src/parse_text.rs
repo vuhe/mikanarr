@@ -24,14 +24,12 @@ pub(crate) fn parse_title(element: &mut Element, tokens: &Tokens) {
     let start = tokens.first_unknown();
     let end = tokens.find_next_bracket_or_identifier(&start);
 
-    let tokens = match end.is_none() {
+    // token_end 处于 bracket_or_identifier 的位置进行拼接
+    let text = match end.is_none() {
         // 如果 start 存在，end 不存在，则为整个名称都是 title
-        true => tokens.sub_tokens_start(&start),
-        false => tokens.sub_tokens(&start, &end),
+        true => build_text(tokens.sub_tokens_start(&start), false),
+        false => build_text(tokens.sub_tokens(&start, &end), false),
     };
-
-    // token_end 处于 bracket_or_identifier 的位置
-    let text = build_text(tokens, false);
 
     match text.is_empty() {
         // 如果最终标题仍未找到，可能之前识别的 tag 就是标题
@@ -41,10 +39,10 @@ pub(crate) fn parse_title(element: &mut Element, tokens: &Tokens) {
 }
 
 /// 将 tokens 内的有效 token 拼装成 text
-fn build_text(tokens: Vec<Token>, keep_delimiter: bool) -> String {
+fn build_text(tokens: impl Iterator<Item = Token>, keep_delimiter: bool) -> String {
     let mut text = String::new();
 
-    tokens.into_iter().for_each(|mut token| {
+    for mut token in tokens {
         if token.is_valid() {
             match (keep_delimiter, token.to_text()) {
                 (false, token) if regex_is_match!("^[,&/]$", &token) => text += &token,
@@ -56,7 +54,7 @@ fn build_text(tokens: Vec<Token>, keep_delimiter: bool) -> String {
                 token.set_identifier();
             }
         }
-    });
+    }
 
     if !keep_delimiter {
         static DASH: [char; 8] = [' ', '-', '‐', '‑', '‒', '–', '—', '―'];

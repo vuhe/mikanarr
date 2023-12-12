@@ -8,8 +8,7 @@ type Node<'a> = (&'a mut Element, &'a mut Token);
 pub(crate) fn parse_keyword(element: &mut Element, tokens: &Tokens) {
     tokens
         .unknown_tokens()
-        .iter_mut()
-        .for_each(|token| handle_single_token(element, token))
+        .for_each(|mut token| handle_single_token(element, &mut token))
 }
 
 fn handle_single_token(element: &mut Element, token: &mut Token) {

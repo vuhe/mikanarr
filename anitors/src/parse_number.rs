@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use lazy_regex::{regex_captures, regex_is_match};
 
-use crate::covert_number::AutoParseU16;
+use crate::covert_number::CnAnNum;
 use crate::tokens::{Token, Tokens};
 use crate::Element;
 
@@ -21,27 +21,22 @@ pub(crate) fn parse_volume(element: &mut Element, tokens: &Tokens) {
 
 /// 搜索影片年份
 pub(crate) fn parse_year(element: &mut Element, tokens: &Tokens) {
-    // 年份区间可以避开 2K(1440p) 和 4K(2160p)
-    static YEAR_RANGE: Range<u16> = 1900..2150;
+    fn year_check(token: &Token) -> bool {
+        // 年份区间可以避开 2K(1440p) 和 4K(2160p)
+        static YEAR_RANGE: Range<u16> = 1900..2150;
+        let text = token.to_text();
+        text.is_ascii_digit() && YEAR_RANGE.contains(&text.parse().unwrap_or(0))
+    }
 
     // 查找第一个括号单数字, e.g. (2000)
-    let unknown_tokens = tokens.unknown_tokens();
-    let isolated_num = unknown_tokens
-        .into_iter()
-        .find(|it| it.to_text().is_ascii_digit() && is_token_isolated(tokens, it))
-        .filter(|it| YEAR_RANGE.contains(&it.to_text().parse().unwrap_or(0)));
+    let isolated_num = tokens
+        .unknown_tokens()
+        .find(|it| is_token_isolated(tokens, it))
+        .filter(year_check);
 
-    let year = isolated_num.or_else(|| {
-        // 未找到括号单数字，尝试直接使用没有括号的数字
-        // 查找 从右到左 的第一个年份, e.g. Wonder Woman 1984 2020
-        tokens
-            .unknown_tokens()
-            .into_iter()
-            .filter(|it| it.to_text().is_ascii_digit())
-            .filter(|it| YEAR_RANGE.contains(&it.to_text().parse().unwrap_or(0)))
-            .rev()
-            .next()
-    });
+    // 未找到括号单数字，尝试直接使用没有括号的数字
+    // 查找 从右到左 的第一个年份, e.g. Wonder Woman 1984 2020
+    let year = isolated_num.or_else(|| tokens.unknown_tokens().filter(year_check).last());
 
     if let Some(mut year) = year {
         year.set_identifier();
@@ -51,9 +46,9 @@ pub(crate) fn parse_year(element: &mut Element, tokens: &Tokens) {
 
 /// 剧集匹配，尽可能的查找 token 中的集数信息
 pub(crate) fn parse_episode(element: &mut Element, tokens: &Tokens) {
-    let unknown_tokens = tokens.unknown_tokens().into_iter();
-    let mut num_tokens = unknown_tokens
-        .filter(|it| it.to_text().has_number())
+    let mut num_tokens = tokens
+        .unknown_tokens()
+        .filter(CnAnNum::has_number)
         .collect::<Vec<_>>();
 
     // 集季在一起
@@ -86,10 +81,10 @@ pub(crate) fn parse_episode(element: &mut Element, tokens: &Tokens) {
     }
 
     // 仅使用纯数字继续尝试
-    let mut num_tokens: Vec<Token> = num_tokens
+    let mut num_tokens = num_tokens
         .into_iter()
         .filter(|it| it.to_text().is_ascii_digit())
-        .collect();
+        .collect::<Vec<_>>();
 
     // 单括号较为准确
     for token in num_tokens.iter_mut() {
