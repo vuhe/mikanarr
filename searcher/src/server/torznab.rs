@@ -30,20 +30,22 @@ static CAPS_XML: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 #[handler]
 pub(super) async fn torznab(Query(mut param): Query<SearchParam>) -> PoemResult<impl IntoResponse> {
     // cap 请求直接返回
-    if let Some(resp) = param.caps() {
-        return Ok(resp);
+    if matches!(param.function, SearchType::Caps) {
+        return Ok(caps_resp());
     }
-    // 不支持的 cat，直接返回空信息
-    if let Some(resp) = param.unsupported_cat()? {
-        return Ok(resp);
+
+    // 不支持的 cat 查询，直接返回空信息，仅支持为空或者默认 cat 值 1000, 2000
+    if !matches!(param.categories.as_str(), "" | "1000" | "2000") {
+        return Ok(empty_resp()?);
     }
+
     // 存在不匹配的查询类别，直接返回空信息
-    if let Some(resp) = param.unmatched_search_type()? {
-        return Ok(resp);
+    if !is_matched_search_type(&mut param) {
+        return Ok(empty_resp()?);
     }
 
     // 查询并返回
-    Ok(param.search_result().await?)
+    Ok(channel_resp(database_search(&param).await?)?)
 }
 
 #[derive(Deserialize)]
@@ -76,78 +78,52 @@ struct SearchParam {
     is_movie: Option<bool>,
 }
 
-impl SearchParam {
-    /// cap 搜索响应
-    fn caps(&self) -> Option<Response> {
-        match self.function {
-            SearchType::Caps => Some(caps_resp()),
-            _ => None,
-        }
-    }
+/// 类型查询是否匹配
+fn is_matched_search_type(param: &mut SearchParam) -> bool {
+    let categories = param
+        .categories
+        .split(",")
+        .filter(|it| !it.is_empty())
+        .collect::<Vec<_>>();
 
-    /// 不支持的 cat 查询，仅支持为空或者默认 cat 值 1000, 2000
-    fn unsupported_cat(&self) -> anyhow::Result<Option<Response>> {
-        match self.categories.as_str() {
-            "" | "1000" | "2000" => Ok(None),
-            _ => Ok(Some(empty_resp()?)),
-        }
-    }
+    let is_matched = match &categories {
+        c if c.is_empty() => true,
+        c if c.contains(&"1000") && matches!(param.function, SearchType::TVSearch) => true,
+        c if c.contains(&"2000") && matches!(param.function, SearchType::MovieSearch) => true,
+        _ if matches!(param.function, SearchType::Search) => true,
+        _ => false,
+    };
 
-    /// 不匹配的类型查询
-    fn unmatched_search_type(&mut self) -> anyhow::Result<Option<Response>> {
-        let categories = self
-            .categories
-            .split(",")
-            .filter(|it| !it.is_empty())
-            .collect::<Vec<_>>();
+    param.is_movie = match categories {
+        _ if matches!(param.function, SearchType::TVSearch) => Some(false),
+        _ if matches!(param.function, SearchType::MovieSearch) => Some(true),
+        c if c.contains(&"1000") => Some(false),
+        c if c.contains(&"2000") => Some(true),
+        _ => None,
+    };
 
-        let is_matched = match &categories {
-            c if c.is_empty() => true,
-            c if c.contains(&"1000") && matches!(self.function, SearchType::TVSearch) => true,
-            c if c.contains(&"2000") && matches!(self.function, SearchType::MovieSearch) => true,
-            _ if matches!(self.function, SearchType::Search) => true,
-            _ => false,
-        };
+    is_matched
+}
 
-        self.is_movie = match categories {
-            _ if matches!(self.function, SearchType::TVSearch) => Some(false),
-            _ if matches!(self.function, SearchType::MovieSearch) => Some(true),
-            c if c.contains(&"1000") => Some(false),
-            c if c.contains(&"2000") => Some(true),
-            _ => None,
-        };
+/// 数据库搜索
+async fn database_search(param: &SearchParam) -> anyhow::Result<Vec<Torrent>> {
+    let mut torrent = Torrent::default();
+    torrent.name = param.query.clone();
+    torrent.imdb_id = param.imdb_id.as_deref().unwrap_or_default().to_owned();
+    torrent.tvdb_id = param.tvdb_id.as_deref().and_then(|it| it.parse().ok());
+    torrent.season = param.season.as_deref().unwrap_or_default().to_owned();
+    torrent.try_parse_detail().await.ok();
 
-        match is_matched {
-            true => Ok(None),
-            false => Ok(Some(empty_resp()?)),
-        }
-    }
+    let imdb = match torrent.imdb_id.as_str() {
+        "" => None,
+        s => Some(s),
+    };
+    let se = match torrent.season.as_str() {
+        "" => None,
+        s => Some(s),
+    };
 
-    /// 执行搜索，返回结果
-    async fn search_result(&self) -> anyhow::Result<Response> {
-        channel_resp(self.database_search().await?)
-    }
-
-    /// 数据库搜索
-    async fn database_search(&self) -> anyhow::Result<Vec<Torrent>> {
-        let mut torrent = Torrent::default();
-        torrent.name = self.query.clone();
-        torrent.imdb_id = self.imdb_id.as_deref().unwrap_or_default().to_owned();
-        torrent.tvdb_id = self.tvdb_id.as_deref().and_then(|it| it.parse().ok());
-        torrent.season = self.season.as_deref().unwrap_or_default().to_owned();
-        torrent.try_parse_detail().await.ok();
-
-        let imdb = match torrent.imdb_id.as_str() {
-            "" => None,
-            s => Some(s),
-        };
-        let se = match torrent.season.as_str() {
-            "" => None,
-            s => Some(s),
-        };
-
-        Torrent::find_by_query(imdb, torrent.tvdb_id, se).await
-    }
+    Torrent::find_by_query(imdb, torrent.tvdb_id, se).await
 }
 
 /// torznab caps 响应
