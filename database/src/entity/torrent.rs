@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use sea_orm::entity::prelude::*;
-use sea_orm::{Condition, IntoActiveModel};
+use sea_orm::prelude::async_trait::async_trait;
+use sea_orm::{ActiveValue, Condition, IntoActiveModel};
 
 use crate::app_data;
 
@@ -40,7 +41,7 @@ pub struct Model {
 impl Model {
     /// 通过 id 查找
     pub async fn find_by_id(id: &str) -> Result<Self> {
-        Entity::find_by_id(id)
+        Entity::find_by_id(id.to_lowercase())
             .one(app_data().await)
             .await?
             .with_context(|| format!("torrent({id}) info is empty."))
@@ -71,7 +72,7 @@ impl Model {
 
     /// 此 torrent 是否存在
     pub async fn exist(&self) -> bool {
-        Entity::find_by_id(self.id.as_str())
+        Entity::find_by_id(self.id.to_lowercase())
             .one(app_data().await)
             .await
             .ok()
@@ -81,7 +82,7 @@ impl Model {
 
     pub async fn insert(self) -> Result<()> {
         let txn = app_data().await;
-        let exist = Entity::find_by_id(&self.id).one(txn).await;
+        let exist = Entity::find_by_id(self.id.to_lowercase()).one(txn).await;
         let exist = exist.ok().and_then(|it| it);
         let model = self.into_active_model();
         match exist {
@@ -95,4 +96,14 @@ impl Model {
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {}
 
-impl ActiveModelBehavior for ActiveModel {}
+#[async_trait]
+impl ActiveModelBehavior for ActiveModel {
+    async fn before_save<C: ConnectionTrait>(mut self, _: &C, _: bool) -> Result<Self, DbErr> {
+        self.id = match self.id {
+            ActiveValue::Set(it) => ActiveValue::Set(it.to_lowercase()),
+            ActiveValue::Unchanged(it) => ActiveValue::Unchanged(it.to_lowercase()),
+            ActiveValue::NotSet => ActiveValue::NotSet,
+        };
+        Ok(self)
+    }
+}
