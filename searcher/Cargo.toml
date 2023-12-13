@@ -10,8 +10,7 @@ parser = { path = "../parser" }
 anyhow = "1"
 bytes = "1"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
-quick-xml = "0.30"
-rss = { version = "2", default-features = false }
+quick-xml = "0.31"
 log = "0.4"
 tokio = "1"
 serde = { version = "1", features = ["derive"] }

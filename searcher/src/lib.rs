@@ -1,8 +1,7 @@
 pub use server::search;
 
+mod rss;
 mod server;
-mod torrent;
-mod torznab;
 
 /// 加载后台服务
 pub fn load() {
