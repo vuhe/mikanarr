@@ -4,7 +4,7 @@ use poem::web::Query;
 use poem::{handler, IntoResponse, Response, Result as PoemResult};
 use serde::Deserialize;
 
-use database::entity::Torrent;
+use database::entity::{Torrent, TorrentSearch};
 use parser::ParseTorrent;
 
 use crate::rss::new_torznab_rss;
@@ -28,7 +28,7 @@ static CAPS_XML: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 </caps>"#;
 
 #[handler]
-pub(super) async fn torznab(Query(mut param): Query<SearchParam>) -> PoemResult<impl IntoResponse> {
+pub(super) async fn handle(Query(mut param): Query<SearchParam>) -> PoemResult<impl IntoResponse> {
     // cap 请求直接返回
     if matches!(param.function, SearchType::Caps) {
         return Ok(caps_resp());
@@ -114,16 +114,19 @@ async fn database_search(param: &SearchParam) -> anyhow::Result<Vec<Torrent>> {
     torrent.season = param.season.as_deref().unwrap_or_default().to_owned();
     torrent.try_parse_detail().await.ok();
 
-    let imdb = match torrent.imdb_id.as_str() {
-        "" => None,
-        s => Some(s),
-    };
-    let se = match torrent.season.as_str() {
-        "" => None,
-        s => Some(s),
+    let param = TorrentSearch {
+        imdb: match torrent.imdb_id.as_str() {
+            "" => None,
+            s => Some(s),
+        },
+        tvdb: torrent.tvdb_id,
+        se: match torrent.season.as_str() {
+            "" => None,
+            s => Some(s),
+        },
     };
 
-    Torrent::find_by_query(imdb, torrent.tvdb_id, se).await
+    Torrent::filter(param).await
 }
 
 /// torznab caps 响应

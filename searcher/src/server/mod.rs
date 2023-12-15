@@ -7,5 +7,5 @@ mod torznab;
 
 /// search api
 pub fn search() -> Route {
-    Route::new().nest("/torznab", get(torznab::torznab))
+    Route::new().nest("/torznab", get(torznab::handle))
 }

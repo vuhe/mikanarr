@@ -5,6 +5,13 @@ use sea_orm::{ActiveValue, Condition, IntoActiveModel};
 
 use crate::app_data;
 
+#[derive(Default)]
+pub struct SearchParam<'a> {
+    pub imdb: Option<&'a str>,
+    pub tvdb: Option<i64>,
+    pub se: Option<&'a str>,
+}
+
 /// 监控的 torrent 信息
 #[derive(Clone, Debug, PartialEq, Eq, Default, DeriveEntityModel)]
 #[sea_orm(table_name = "torrent")]
@@ -48,24 +55,14 @@ impl Model {
     }
 
     /// 通过条件查找
-    pub async fn find_by_query(
-        imdb: Option<&str>,
-        tvdb: Option<i64>,
-        se: Option<&str>,
-    ) -> Result<Vec<Self>> {
-        let mut condition = Condition::any();
-        if let Some(imdb) = imdb {
-            condition = condition.add(Column::ImdbId.eq(imdb));
-        }
-        if let Some(tvdb) = tvdb {
-            condition = condition.add(Column::TvdbId.eq(tvdb));
-        }
-        if let Some(se) = se {
-            condition = condition.add(Column::Season.like(format!("%{se}%")));
-        }
-
+    pub async fn filter(p: SearchParam<'_>) -> Result<Vec<Self>> {
         Ok(Entity::find()
-            .filter(condition)
+            .filter(
+                Condition::any()
+                    .add_option(p.imdb.map(|it| Column::ImdbId.eq(it)))
+                    .add_option(p.tvdb.map(|it| Column::TvdbId.eq(it)))
+                    .add_option(p.se.map(|it| Column::Season.like(format!("%{it}%")))),
+            )
             .all(app_data().await)
             .await?)
     }
@@ -82,13 +79,8 @@ impl Model {
 
     pub async fn insert(self) -> Result<()> {
         let txn = app_data().await;
-        let exist = Entity::find_by_id(self.id.to_lowercase()).one(txn).await;
-        let exist = exist.ok().and_then(|it| it);
         let model = self.into_active_model();
-        match exist {
-            None => drop(Entity::insert(model).exec(txn).await?),
-            Some(_) => drop(Entity::update(model).exec(txn).await?),
-        }
+        Entity::insert(model).exec(txn).await?;
         Ok(())
     }
 }

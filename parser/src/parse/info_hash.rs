@@ -99,7 +99,7 @@ struct Info<'a> {
 enum InfoHash {
     V1(String),
     V2(String),
-    Hybrid((String, String)),
+    Hybrid(String, String),
 }
 
 impl InfoHash {
@@ -116,13 +116,13 @@ impl InfoHash {
     }
 
     fn support_v1(&self) -> bool {
-        matches!(self, Self::V1(_) | Self::Hybrid(_))
+        matches!(self, Self::V1(_) | Self::Hybrid(_, _))
     }
 
     fn hybrid(self, with: InfoHash) -> Result<Self> {
         match (self, with) {
-            (Self::V1(hash1), Self::V2(hash2)) => Ok(Self::Hybrid((hash1, hash2))),
-            (Self::V2(hash2), Self::V1(hash1)) => Ok(Self::Hybrid((hash1, hash2))),
+            (Self::V1(hash1), Self::V2(hash2)) => Ok(Self::Hybrid(hash1, hash2)),
+            (Self::V2(hash2), Self::V1(hash1)) => Ok(Self::Hybrid(hash1, hash2)),
             (Self::V1(_), Self::V1(_)) => bail!("can't make hybrid out of two V1 hashes"),
             (Self::V2(_), Self::V2(_)) => bail!("can't make hybrid out of two V2 hashes"),
             _ => bail!("can't make a hybrid out of an already-hybrid info hash"),
@@ -135,7 +135,7 @@ impl InfoHash {
             InfoHash::V1(v1) => v1,
             InfoHash::V2(v2) => v2,
             // 为保证兼容性，混合 hash 使用 v1
-            InfoHash::Hybrid((v1, _)) => v1,
+            InfoHash::Hybrid(v1, _) => v1,
         }
     }
 }

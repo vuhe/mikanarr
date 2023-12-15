@@ -1,6 +1,6 @@
 use anyhow::Result;
 use sea_orm::entity::prelude::*;
-use sea_orm::IntoActiveModel;
+use sea_orm::Set;
 
 use encode::sha256_encode;
 
@@ -64,12 +64,10 @@ async fn get_by_key(key: &str) -> Option<String> {
 
 async fn save_config<T: ToString>(key: &str, val: Option<T>) -> Result<()> {
     if let Some(val) = val {
-        let model = Model {
-            key: key.into(),
-            value: val.to_string(),
-        }
-        .into_active_model()
-        .reset_all();
+        let model = ActiveModel {
+            key: Set(key.into()),
+            value: Set(val.to_string()),
+        };
         let txn = app_data().await;
         let exist = Entity::find_by_id(key).one(txn).await?;
         match exist {
