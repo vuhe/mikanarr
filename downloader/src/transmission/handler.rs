@@ -6,7 +6,7 @@ use encode::base64_encode;
 
 use super::receiver::{AddTorrentResp, PortTestResp, Response, TorrentInfo, TorrentList};
 use super::sender::Request;
-use super::{client, Session, TR};
+use super::{Session, CLIENT, TR};
 
 impl TR {
     pub(super) async fn port_test(&self) -> Result<()> {
@@ -56,7 +56,7 @@ impl TR {
     }
 
     fn build_req(&self, request: Request) -> RequestBuilder {
-        let mut req = client().post(&self.url);
+        let mut req = CLIENT.post(&self.url);
         let username = self.username.as_ref();
         if let Some(username) = username.filter(|it| !it.is_empty()) {
             let password = self.password.as_ref();

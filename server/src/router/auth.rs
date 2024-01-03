@@ -1,6 +1,7 @@
-use std::sync::{Mutex, MutexGuard, OnceLock};
+use std::sync::{Mutex, MutexGuard};
 
 use cached::{Cached, TimedSizedCache};
+use once_cell::sync::Lazy as LazyLock;
 use poem::http::header::AUTHORIZATION;
 use poem::web::Json;
 use poem::{handler, Endpoint, IntoResponse, Request, Response, Result};
@@ -13,12 +14,11 @@ use encode::sha256_encode;
 use super::ResultResp;
 
 fn session() -> MutexGuard<'static, TimedSizedCache<String, ()>> {
-    static SESSION: OnceLock<Mutex<TimedSizedCache<String, ()>>> = OnceLock::new();
-    let mutex = SESSION.get_or_init(|| {
+    static SESSION: LazyLock<Mutex<TimedSizedCache<String, ()>>> = LazyLock::new(|| {
         let cache = TimedSizedCache::with_size_and_lifespan_and_refresh(5, 30 * 60, true);
         Mutex::new(cache)
     });
-    mutex.lock().unwrap()
+    SESSION.lock().unwrap()
 }
 
 #[derive(Deserialize)]

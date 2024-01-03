@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 use encode::base64_encode;
 
 use super::receiver::{DownloadStatus, Response};
-use super::{client, AR};
+use super::{AR, CLIENT};
 
 fn list_fields() -> Value {
     static LIST_FIELDS: [&str; 5] = [
@@ -103,7 +103,7 @@ impl AR {
         }
         param_fn(&mut param);
 
-        let req = client().post(&self.url).json(&Request {
+        let req = CLIENT.post(&self.url).json(&Request {
             jsonrpc: "2.0",
             id: "mikanarr",
             method,

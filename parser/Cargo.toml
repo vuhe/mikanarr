@@ -10,6 +10,7 @@ database = { path = "../database" }
 encode = { path = "../encode" }
 tmdb = { path = "../tmdb" }
 anyhow = "1"
+once_cell = "1"
 lazy-regex = "3"
 log = "0.4"
 bt_bencode = "0.7"

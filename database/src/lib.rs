@@ -3,6 +3,7 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::OnceLock;
 
+use once_cell::sync::Lazy as LazyLock;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use sea_orm_migration::MigratorTrait;
 
@@ -12,12 +13,11 @@ pub mod entity;
 mod migrate;
 
 /// 是否启用 sqlx 日志
-fn use_sqlx_logging() -> bool {
-    match std::env::var("USE_SQLX_LOGGING") {
+static USE_SQLX_LOGGING: LazyLock<bool> =
+    LazyLock::new(|| match std::env::var("USE_SQLX_LOGGING") {
         Ok(it) if it.as_str() == "true" => true,
         _ => false,
-    }
-}
+    });
 
 /// 资源数据库，预先嵌入的资源数据，只读不要更改
 async fn res_data() -> &'static DatabaseConnection {
@@ -32,7 +32,7 @@ async fn res_data() -> &'static DatabaseConnection {
     let res_data_url = format!("sqlite:file:{}?mode=ro", res_data_path);
 
     let mut opt = ConnectOptions::new(res_data_url);
-    opt.sqlx_logging(use_sqlx_logging());
+    opt.sqlx_logging(*USE_SQLX_LOGGING);
     let database = match Database::connect(opt).await {
         Ok(it) => it,
         Err(e) => panic!("open res database error: {:#?}", e),
@@ -57,7 +57,7 @@ async fn app_data() -> &'static DatabaseConnection {
     let app_data_url = format!("sqlite:file:{}?mode=rwc", app_data_path.display());
 
     let mut opt = ConnectOptions::new(app_data_url);
-    opt.sqlx_logging(use_sqlx_logging());
+    opt.sqlx_logging(*USE_SQLX_LOGGING);
     let database = match Database::connect(opt).await {
         Ok(it) => it,
         Err(e) => panic!("open app database error: {:#?}", e),

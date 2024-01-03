@@ -7,6 +7,7 @@ description = "sqlite 的 ORM 包装"
 [dependencies]
 encode = { path = "../encode" }
 anyhow = "1"
+once_cell = "1"
 log = "0.4"
 serde = { version = "1", features = ["derive"] }
 sea-orm = { version = "0.12", default-features = false, features = ["macros", "with-chrono", "sqlx-sqlite", "runtime-tokio-rustls"] }
