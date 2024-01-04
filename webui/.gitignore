@@ -18,8 +18,8 @@ yarn-error.log
 *.zip
 .history
 .stylelintcache
-yarn.lock
-package-lock.json
-pnpm-lock.yaml
+#yarn.lock
+#package-lock.json
+#pnpm-lock.yaml
 .env.local
 .env.*.local

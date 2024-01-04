@@ -29,8 +29,8 @@ webui/yarn-error.log
 webui/*.zip
 webui/.history
 webui/.stylelintcache
-webui/yarn.lock
-webui/package-lock.json
-webui.pnpm-lock.yaml
+#webui/yarn.lock
+#webui/package-lock.json
+#webui.pnpm-lock.yaml
 webui/.env.local
 webui/.env.*.local
