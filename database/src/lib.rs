@@ -13,11 +13,11 @@ pub mod entity;
 mod migrate;
 
 /// 是否启用 sqlx 日志
-static USE_SQLX_LOGGING: LazyLock<bool> =
-    LazyLock::new(|| match std::env::var("USE_SQLX_LOGGING") {
-        Ok(it) if it.as_str() == "true" => true,
-        _ => false,
-    });
+static USE_SQLX_LOGGING: LazyLock<bool> = LazyLock::new(|| {
+    std::env::var("USE_SQLX_LOGGING")
+        .map(|it| it.eq_ignore_ascii_case("true"))
+        .unwrap_or(false)
+});
 
 /// 资源数据库，预先嵌入的资源数据，只读不要更改
 async fn res_data() -> &'static DatabaseConnection {

@@ -9,26 +9,24 @@ use super::receiver::{DownloadStatus, Response};
 use super::{AR, CLIENT};
 
 fn list_fields() -> Value {
-    static LIST_FIELDS: [&str; 5] = [
+    json!([
         "gid",
         "infoHash",
         "totalLength",
         "completedLength",
         "status",
-    ];
-    Value::from(LIST_FIELDS.as_slice())
+    ])
 }
 
 fn detail_fields() -> Value {
-    static DETAIL_FIELDS: [&str; 6] = [
+    json!([
         "gid",
         "infoHash",
         "totalLength",
         "completedLength",
         "status",
         "files",
-    ];
-    Value::from(DETAIL_FIELDS.as_slice())
+    ])
 }
 
 #[derive(Debug, Serialize)]
